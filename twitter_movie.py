@@ -1,8 +1,27 @@
-
 import tweepy
-KEY_FILEPATH = "../access.txt"
 import wget
-#from google.cloud import vision
+import os
+KEY_FILEPATH = "../access.txt"
+
+def download_ims(urls, low, high):
+    '''Download images from indices low to high of the list of urls'''
+    if (len(urls) < 1): 
+        print("No images to download")
+    else:
+        return 
+
+def encode(images_path, fps=30, pix_format='yuv420p', out_format='mp4'):
+    '''Encode a video from the numbered images at images_path'''
+    command = [
+        'ffmpeg', '-framerate', '1/3', '-i', 'img%d.png', 
+        '-r', '%d' % fps, '-pix_fmt', '%s' % pix_format, 
+        'out.%s' % out_format
+    ]
+    print(' '.join(command))
+
+
+def generate_text_images():
+    return
 
 def twitter_summary(num):
     tokens = []
@@ -30,5 +49,10 @@ def twitter_summary(num):
         if(len(media) > 0):
             media_files.add(media[0]['media_url'])
 
+
+
+    
+
 if __name__ == "__main__":
-    twitter_summary(20)
+    encode('')
+    #twitter_summary(20)
