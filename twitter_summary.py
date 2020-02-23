@@ -2,9 +2,9 @@
 import tweepy
 KEY_FILEPATH = "../access.txt"
 import wget
-from google.cloud import vision
+#from google.cloud import vision
 
-def twitter_summary():
+def twitter_summary(num):
     tokens = []
     try:
         with open(KEY_FILEPATH, "r") as fp:
@@ -22,32 +22,13 @@ def twitter_summary():
 
     #initialize Tweepy API
     api = tweepy.API(auth)
-    public_tweets = api.home_timeline(count=100) #get 100 tweets from timeline
+    public_tweets = api.home_timeline(count=num) #get 100 tweets from timeline
+
     media_files = set()
     for tweet in public_tweets:
-        try:
-            media = tweet.entities.get('media', [])
+        media = tweet.entities.get('media', [])
+        if(len(media) > 0):
             media_files.add(media[0]['media_url'])
-        except:
-            continue
-    
-    # Use Google vision to get summary of twitter feed
-    summary = []
-    summary.append("Hello! Here is a summary of the images on your twitter feed today!")
-
-    tweet_num = 1
-    for url in media_files:
-        next_message = "Tweet {0}:".format(tweet_num)
-        client = vision.ImageAnnotatorClient()
-        image = vision.types.Image()
-        image.source.image_uri = url
-
-        response = client.label_detection(image=image)
-        
-        for label in response.label_annotations:
-            next_message += f'{label.description} ({label.score*100.:.2f}%),')
-        
-        summary.append(next_message)
 
 if __name__ == "__main__":
-    twitter_summary()
+    twitter_summary(20)
