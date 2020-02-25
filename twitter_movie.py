@@ -60,6 +60,13 @@ def init_images_folder():
             shutil.rmtree('./images')   #remove all contents
     os.mkdir('./images')
 
+def clean_folders():
+    '''Function that deletes images folder and output video'''
+    if (os.path.isdir('./images')): #remove if already present
+        shutil.rmtree('./images')   #remove all contents
+    if (os.path.isfile('./out.mp4')):
+        os.remove('./out.mp4')
+
 def encode(images_path, fps=30, pix_format='yuv420p', threads=4, out_format='mp4'):
     '''Encode a video from the numbered images at images_path'''
     if (os.path.isfile('./out.mp4')):
@@ -98,34 +105,33 @@ def load_tweets_pickle():
     with open('sample_tweets.p', 'rb') as pkl_file:
         return pkl.load(pkl_file)
 
-def twitter_movie(num=20, get_new_tweets=False):
+def twitter_movie(num=20, get_new_tweets=True):
     '''Create twitter feed summary for num tweets. Option to get more tweets from twitter'''
     tokens = []
-    try:
+    try: # Try to find keys
         with open(KEY_FILEPATH, "r") as fp:
             for token in fp.readlines():
                 tokens.append(token.rstrip())
     except:
         print("Cannot find Tweepy API keys")
-        print("Exiting...")
-        return
+        print("Using pre-fetched Tweets")
+        get_new_tweets = False
 
-    access_token, access_token_secret, api_key, api_key_secret = tokens
-    
-    auth = tweepy.OAuthHandler(api_key, api_key_secret)
-    auth.set_access_token(access_token, access_token_secret)
-
-    #Use Tweepy API to get the latest "num" tweets
-    api = tweepy.API(auth)
-    
-    #Get tweets either from local or from twitter
     if (get_new_tweets):
-        public_tweets = api.home_timeline(count=num) #get num tweets from timeline
+        access_token, access_token_secret, api_key, api_key_secret = tokens
+        
+        auth = tweepy.OAuthHandler(api_key, api_key_secret)
+        auth.set_access_token(access_token, access_token_secret)
+
+        #Use Tweepy API to get the latest "num" tweets
+        api = tweepy.API(auth)
+
+        public_tweets = api.home_timeline(count=num) #get num tweets from timeline    
     else:
         public_tweets = load_tweets_pickle()
     
-    media_tweets = {} #dictionary that maps a tweet number to its media url and text
-    text_tweets = {}  #dictionary that maps a tweet number to just its text
+    media_tweets = {} #dictionary that maps a tweet number to its media url, user name, and text
+    text_tweets = {}  #dictionary that maps a tweet number to its text and user name
     for i in range(len(public_tweets)):
         text = public_tweets[i].text
         user = public_tweets[i].user.name
@@ -141,12 +147,10 @@ def twitter_movie(num=20, get_new_tweets=False):
     frame_gen_thread = threading.Thread(target=generate_text_images, args=(text_tweets,))
 
     # Download images and caption them
-    #download_and_caption(media_tweets)
     download_thread.start()
     frame_gen_thread.start()
 
     #Generate text images
-    #generate_text_images(text_tweets)
     download_thread.join()
     frame_gen_thread.join()
 
