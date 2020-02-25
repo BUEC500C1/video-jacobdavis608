@@ -3,6 +3,7 @@ import wget
 import os
 import shutil
 import threading
+import multiprocessing
 import time
 import textwrap
 import pickle as pkl
@@ -20,7 +21,7 @@ KEY_FILEPATH = "../access.txt"
 #    
 ##########################################################
 
-def download_and_caption(media, background_size=(1440,900), image_size=(960, 720)):
+def download_and_caption(media, background_size=(1280,720)):
     '''Download images using the input media'''
     if (len(media) < 1): 
         print("No images to download")
@@ -28,7 +29,7 @@ def download_and_caption(media, background_size=(1440,900), image_size=(960, 720
         #download the images
         try:
             for key in media.keys():
-                img_file = './img_raw%d.jpg' % key
+                img_file = './images/img_raw%d.jpg' % key
                 wget.download(media[key][2], img_file) #download image
 
                 #paste image on a white background under caption
@@ -42,39 +43,37 @@ def download_and_caption(media, background_size=(1440,900), image_size=(960, 720
 
                 #caption image
                 d = ImageDraw.Draw(background)
-                font = ImageFont.truetype('../fonts/HelveticaNeue.ttf', 36) #Choose twitter font
+                font = ImageFont.truetype('./fonts/HelveticaNeue.ttf', 36) #Choose twitter font
                 tweet_template = "{0}: \n\n{1}"
                 formatted_text = '\n'.join(textwrap.wrap(media[key][0], width=50)) #wrap tweet text
                 d.text((10,10), tweet_template.format(media[key][1], formatted_text), font=font, fill=(255, 255, 255))
                 
-                background.save('./img%d.jpg' % key)
-                os.remove('./img_raw%d.jpg' % key)
+                background.save('./images/img%d.jpg' % key)
+                os.remove('./images/img_raw%d.jpg' % key)
                 
         except Exception as e:
             print(e)
-        
-        os.chdir('..')
 
 def init_images_folder():
     '''Set up images folder for processing'''
     if (os.path.isdir('./images')): #remove if already present
             shutil.rmtree('./images')   #remove all contents
     os.mkdir('./images')
-    os.chdir('./images')
 
-def encode(images_path, fps=30, pix_format='yuv420p', out_format='mp4'):
+def encode(images_path, fps=30, pix_format='yuv420p', threads=4, out_format='mp4'):
     '''Encode a video from the numbered images at images_path'''
-    
+    if (os.path.isfile('./out.mp4')):
+        os.remove('./out.mp4')
     command = [
         'ffmpeg', '-framerate', '1/3', '-i', '{0}/img%d.jpg'.format(images_path), 
-        '-r', '%d' % fps, '-pix_fmt', '%s' % pix_format, 
+        '-threads', '%d' % threads, '-r', '%d' % fps, '-pix_fmt', '%s' % pix_format, 
         'out.%s' % out_format
     ]
     com = ' '.join(command)
     os.system(com)
     #print("\n\n%s" % com)
 
-def generate_text_images(text_tweets, im_size=(1440,900)):
+def generate_text_images(text_tweets, im_size=(1280,720)):
     '''Launch as a subprocess to occur in parallel with downloads'''
     tweet_template = "{0}: \n\n{1}"
     if (not os.path.isdir('./images')):
@@ -87,8 +86,6 @@ def generate_text_images(text_tweets, im_size=(1440,900)):
         formatted_text = '\n'.join(textwrap.wrap(text_tweets[num][0], width=50)) #wrap tweet text
         d.text((10,10), tweet_template.format(text_tweets[num][1], formatted_text), font=font, fill=(255, 255, 255))
         img.save('./images/img%d.jpg' % num)
-
-    return
 
 def save_tweets_pickle(api, num_tweets):
     '''Save the home timeline tweets as a pickle file'''
@@ -140,12 +137,18 @@ def twitter_movie(num=20, get_new_tweets=False):
 
     #Initialize images folder
     init_images_folder()
+    download_thread = threading.Thread(target=download_and_caption, args=(media_tweets,))
+    frame_gen_thread = threading.Thread(target=generate_text_images, args=(text_tweets,))
 
     # Download images and caption them
-    download_and_caption(media_tweets)
+    #download_and_caption(media_tweets)
+    download_thread.start()
+    frame_gen_thread.start()
 
     #Generate text images
-    generate_text_images(text_tweets)
+    #generate_text_images(text_tweets)
+    download_thread.join()
+    frame_gen_thread.join()
 
     #Generate video
     encode('./images')
