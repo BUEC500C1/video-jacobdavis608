@@ -78,7 +78,6 @@ def encode(images_path, fps=30, pix_format='yuv420p', threads=4, out_format='mp4
     ]
     com = ' '.join(command)
     os.system(com)
-    #print("\n\n%s" % com)
 
 def generate_text_images(text_tweets, im_size=(1280,720)):
     '''Launch as a subprocess to occur in parallel with downloads'''
