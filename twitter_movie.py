@@ -104,13 +104,14 @@ def load_tweets_pickle():
     with open('sample_tweets.p', 'rb') as pkl_file:
         return pkl.load(pkl_file)
 
-def twitter_movie(num=20, get_new_tweets=True):
+def twitter_movie(num=20):
     '''Create twitter feed summary for num tweets. Option to get more tweets from twitter'''
     tokens = []
     try: # Try to find keys
         with open(KEY_FILEPATH, "r") as fp:
             for token in fp.readlines():
                 tokens.append(token.rstrip())
+        get_new_tweets = True
     except:
         print("Cannot find Tweepy API keys")
         print("Using pre-fetched Tweets")
